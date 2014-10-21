@@ -1,0 +1,20 @@
+{
+  "name": "blind",
+  "version": "0.1.0",
+  "description": "Simple string encryption and hashing for Node",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test"
+  },
+  "keywords": [
+    "encryption",
+    "hashing"
+  ],
+  "author": "pgirard",
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "~2.3.6",
+    "it": "~0.2.7",
+    "is": "~2.0.2"
+  }
+}
