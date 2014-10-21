@@ -1,14 +1,8 @@
 'use strict';
 
-var it = require('it');
+var test = require('tape');
 
-require('./spec-2space-reporter');
-
-var testIs = require('./test-is');
-var testBlind = require('./test-blind');
-
-testIs(it);
-testBlind(it);
-
-it.reporter('spec-2space');
-it.run();
+test(function (t) {
+  t.test('is', require('./test-is'));
+  t.test('blind', require('./test-blind'));
+});

@@ -1,92 +1,45 @@
 'use strict';
 
-var assert = require('assert');
-
 var Blind = require('../index');
 
-module.exports = function (it) {
-  it.describe('constructor', function (it) {
+module.exports = function (n) {
+  n.test('option binaryEncoding', function (t) {
+    t.equal(Blind.create({ binaryEncoding: 'hex' }).binaryEncoding, 'hex', 'should accept a valid value');
+    t.throws(function () { Blind.create({ binaryEncoding: 'xyz' }); }, 'should reject an invalid value');
+    t.end();
+  });
 
-    it.describe('option binaryEncoding', function (it) {
+  n.test('option encryptAlgorithm', function (t) {
+    t.equal(Blind.create({ encryptAlgorithm: 'aes-256-cbc' }).encryptAlgorithm, 'aes-256-cbc', 'should accept a valid value');
+    t.throws(function () { Blind.create({ encryptAlgorithm: 'xyz' }); }, 'should reject an invalid value');
+    t.end();
+  });
 
-      it.should('accept a valid value', function () {
-        assert.strictEqual(Blind.create({ binaryEncoding: 'hex' }).binaryEncoding, 'hex');
-      });
+  n.test('option hashLength', function (t) {
+    t.equal(Blind.create({ hashLength: 20 }).hashLength, 20, 'should accept a valid value');
+    t.throws(function () { Blind.create({ hashLength: 'xyz' }); }, 'should reject a non-number');
+    t.throws(function () { Blind.create({ hashLength: -1 }); }, 'should reject an out-of range number');
+    t.end();
+  });
 
-      it.should('reject an invalid value', function () {
-        assert.throws(function () { Blind.create({ binaryEncoding: 'xyz' }); }, RangeError);
-      });
-    });
+  n.test('option hashRounds', function (t) {
+    t.equal(Blind.create({ hashRounds: 20 }).hashRounds, 20, 'should accept a valid value');
+    t.throws(function () { Blind.create({ hashRounds: 'xyz' }); }, 'should reject a non-number');
+    t.throws(function () { Blind.create({ hashRounds: -1 }); }, 'should reject an out-of range number');
+    t.end();
+  });
 
-    it.describe('option encryptAlgorithm', function (it) {
+  n.test('option maxDataLength', function (t) {
+    t.equal(Blind.create({ maxDataLength: 8192 }).maxDataLength, 8192, 'should accept a valid value');
+    t.throws(function () { Blind.create({ maxDataLength: 'xyz' }); }, 'should reject a non-number');
+    t.throws(function () { Blind.create({ maxDataLength: -1 }); }, 'should reject an out-of range number');
+    t.end();
+  });
 
-      it.should('accept a valid value', function () {
-        assert.strictEqual(Blind.create({ encryptAlgorithm: 'aes-256-cbc' }).encryptAlgorithm, 'aes-256-cbc');
-      });
-
-      it.should('reject an invalid value', function () {
-        assert.throws(function () { Blind.create({ encryptAlgorithm: 'xyz' }); }, RangeError);
-      });
-    });
-
-    it.describe('option hashLength', function (it) {
-
-      it.should('accept a valid value', function () {
-        assert.strictEqual(Blind.create({ hashLength: 20 }).hashLength, 20);
-      });
-
-      it.should('reject a non-number', function () {
-        assert.throws(function () { Blind.create({ hashLength: 'xyz' }); }, TypeError);
-      });
-
-      it.should('reject an out-of range number', function () {
-        assert.throws(function () { Blind.create({ hashLength: -1 }); }, RangeError);
-      });
-    });
-
-    it.describe('option hashRounds', function (it) {
-
-      it.should('accept a valid value', function () {
-        assert.strictEqual(Blind.create({ hashRounds: 20 }).hashRounds, 20);
-      });
-
-      it.should('reject a non-number', function () {
-        assert.throws(function () { Blind.create({ hashRounds: 'xyz' }); }, TypeError);
-      });
-
-      it.should('reject an out-of range number', function () {
-        assert.throws(function () { Blind.create({ hashRounds: -1 }); }, RangeError);
-      });
-    });
-
-    it.describe('option maxDataLength', function (it) {
-
-      it.should('accept a valid value', function () {
-        assert.strictEqual(Blind.create({ maxDataLength: 8192 }).maxDataLength, 8192);
-      });
-
-      it.should('reject a non-number', function () {
-        assert.throws(function () { Blind.create({ maxDataLength: 'xyz' }); }, TypeError);
-      });
-
-      it.should('reject an out-of range number', function () {
-        assert.throws(function () { Blind.create({ maxDataLength: -1 }); }, RangeError);
-      });
-    });
-
-    it.describe('option maxRandomLength', function (it) {
-
-      it.should('accept a valid value', function () {
-        assert.strictEqual(Blind.create({ maxRandomLength: 256 }).maxRandomLength, 256);
-      });
-
-      it.should('reject a non-number', function () {
-        assert.throws(function () { Blind.create({ maxRandomLength: 'xyz' }); }, TypeError);
-      });
-
-      it.should('reject an out-of range number', function () {
-        assert.throws(function () { Blind.create({ maxRandomLength: 6 }); }, RangeError);
-      });
-    });
+  n.test('option maxRandomLength', function (t) {
+    t.equal(Blind.create({ maxRandomLength: 256 }).maxRandomLength, 256, 'should accept a valid value');
+    t.throws(function () { Blind.create({ maxRandomLength: 'xyz' }); }, 'should reject a non-number');
+    t.throws(function () { Blind.create({ maxRandomLength: -1 }); }, 'should reject an out-of range number');
+    t.end();
   });
 };

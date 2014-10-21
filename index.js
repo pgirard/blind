@@ -123,6 +123,11 @@ Blind.prototype.random = function (length) {
     // check properties and arguments
 
     if (!self.skipChecks) {
+      if (validBinaryEncodings.indexOf(self.binaryEncoding) < 0) {
+        reject(new RangeError(binaryEncodingMessage));
+        return;
+      }
+
       if (!is.number(self.maxRandomLength)) {
         reject(new TypeError(maxRandomLengthMessage));
         return;

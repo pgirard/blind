@@ -1,85 +1,73 @@
 'use strict';
 
-var assert = require('assert');
-
 var Blind = require('../index');
-var is = require('../is');
 
-module.exports = function (it, shared) {
-  it.describe('encrypt()', function (it) {
+var plainText = 'abcdefghijlkmno';
+var key = 'kiSyAWnj9VDVIfI3u7zj';
+var encryptedText = 'f+ElzhNFLVHKi/j/I6fu';
 
-    it.should('encrypt a plaintext value', function () {
-      return Blind.create().encrypt(shared.plainText, shared.randomValue).then(function (value) {
-        shared.encryptedText = value;
-        assert.isTrue(is.base64(value));
-      });
+module.exports = function (n) {
+  n.plan(6);
+
+  Blind.create().encrypt(plainText, key).then(function (value) {
+    n.equal(value, encryptedText, 'should encrypt a plaintext value');
+  });
+
+  n.test('property binaryEncoding', function (t) {
+    t.plan(1);
+
+    var blind = Blind.create();
+    blind.binaryEncoding = 'xyz';
+    blind.encrypt(plainText, key).catch(function (error) {
+      t.ok(error instanceof RangeError, 'should reject an invalid value');
+    });
+  });
+
+  n.test('property encryptAlgorithm', function (t) {
+    t.plan(1);
+
+    var blind = Blind.create();
+    blind.encryptAlgorithm = 'xyz';
+    blind.encrypt(plainText, key).catch(function (error) {
+      t.ok(error instanceof RangeError, 'should reject an invalid value');
+    });
+  });
+
+  n.test('property maxDataLength', function (t) {
+    t.plan(2);
+
+    var blind = Blind.create();
+    blind.maxDataLength = 'xyz';
+    blind.encrypt(plainText, key).catch(function (error) {
+      t.ok(error instanceof TypeError, 'should reject a non-number');
     });
 
-    it.describe('property binaryEncoding', function (it) {
+    blind = Blind.create();
+    blind.maxDataLength = -1;
+    blind.encrypt(plainText, key).catch(function (error) {
+      t.ok(error instanceof RangeError, 'should reject an out-of range number');
+    });
+  });
 
-      it.should('reject an invalid value', function () {
-        var blind = Blind.create();
-        blind.binaryEncoding = 'xyz';
-        return blind.encrypt(shared.plainText, shared.randomValue).catch(function (error) {
-          assert.instanceOf(error, RangeError);
-        });
-      });
+  n.test('argument data', function (t) {
+    t.plan(1);
+
+    var blind = Blind.create();
+    blind.maxDataLength = 15;
+    blind.encrypt('abcdefghijklmnop', key).catch(function (error) {
+      t.ok(error instanceof TypeError, 'should reject a string that is too long');
+    });
+  });
+
+  n.test('argument key', function (t) {
+    t.plan(2);
+
+    Blind.create().encrypt(plainText, 10).catch(function (error) {
+      t.ok(error instanceof TypeError, 'should reject a non-number');
     });
 
-    it.describe('property encryptAlgorithm', function (it) {
-
-      it.should('reject an invalid value', function () {
-        var blind = Blind.create();
-        blind.encryptAlgorithm = 'xyz';
-        return blind.encrypt(shared.plainText, shared.randomValue).catch(function (error) {
-          assert.instanceOf(error, RangeError);
-        });
-      });
-    });
-
-    it.describe('property maxDataLength', function (it) {
-
-      it.should('reject a non-number', function () {
-        var blind = Blind.create();
-        blind.maxDataLength = 'xyz';
-        return blind.encrypt(shared.plainText, shared.randomValue).catch(function (error) {
-          assert.instanceOf(error, TypeError);
-        });
-      });
-
-      it.should('reject an out-of range number', function () {
-        var blind = Blind.create();
-        blind.maxDataLength = -1;
-        return blind.encrypt(shared.plainText, shared.randomValue).catch(function (error) {
-          assert.instanceOf(error, RangeError);
-        });
-      });
-    });
-
-    it.describe('argument data', function (it) {
-
-      it.should('reject a string that is too long', function () {
-        var blind = Blind.create();
-        blind.maxDataLength = 15;
-        return blind.encrypt('abcdefghijklmnop', shared.randomValue).catch(function (error) {
-          assert.instanceOf(error, TypeError);
-        });
-      });
-    });
-
-    it.describe('argument key', function (it) {
-
-      it.should('reject a non-string', function () {
-        return Blind.create().encrypt(shared.plainText, 10).catch(function (error) {
-          assert.instanceOf(error, TypeError);
-        });
-      });
-
-      it.should('reject a non-binary-encoded string', function () {
-        return Blind.create().encrypt(shared.plainText, 'abcde').catch(function (error) {
-          assert.instanceOf(error, TypeError);
-        });
-      });
+    Blind.create().encrypt(plainText, 'abcde').catch(function (error) {
+      t.ok(error instanceof TypeError, 'should reject a non-binary-encoded string');
     });
   });
 };
