@@ -1,22 +1,34 @@
 {
   "name": "blind",
   "version": "0.1.0",
-  "description": "Simple string encryption and hashing for Node",
+  "description": "simple string encryption and hashing",
   "main": "index.js",
   "scripts": {
     "test": "node test"
   },
   "keywords": [
+    "random",
     "encryption",
-    "hashing"
+    "encrypt",
+    "decrypt",
+    "hashing",
+    "hash"
   ],
-  "author": "pgirard",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pgirard/blind.git"
+  },
+  "author": {
+    "name": "Peter Girard",
+    "email": "pgirard@appgeo.com",
+    "url": "http://www.appgeo.com"
+  },
   "license": "MIT",
   "dependencies": {
     "bluebird": "~2.3.6",
-    "it": "~0.2.7",
-    "is": "~2.0.2",
-    "tape": "~3.0.1",
-    "tap-spec": "~1.0.1"
+    "is": "~2.0.2"
+  },
+  "devDependencies": {
+    "tape": "~3.0.1"
   }
 }
