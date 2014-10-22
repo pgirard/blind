@@ -207,21 +207,16 @@ Blind.prototype.encrypt = function(data, key) {
 
     // encrypt the data
 
-    try {
-      var cipher = crypto.createCipher(self.encryptAlgorithm, key);
-      var buffers = [];
+    var cipher = crypto.createCipher(self.encryptAlgorithm, key);
+    var buffers = [];
 
-      cipher.on('data', function (chunk) {
-        buffers.push(chunk);
-      })
-      .on('end', function () {
-        resolve(Buffer.concat(buffers).toString(self.binaryEncoding));
-      })
-      .end(data, stringEncoding);
-    }
-    catch (error) {
-      reject(error);
-    }
+    cipher.on('data', function (chunk) {
+      buffers.push(chunk);
+    })
+    .on('end', function () {
+      resolve(Buffer.concat(buffers).toString(self.binaryEncoding));
+    })
+    .end(data, stringEncoding);
   });
 };
 
@@ -281,22 +276,20 @@ Blind.prototype.decrypt = function(data, key) {
 
     // decrypt the data
 
-    try {
-      var decipher = crypto.createDecipher(self.encryptAlgorithm, key);
-      var buffers = [];
 
-      decipher.on('data', function (chunk) {
-        buffers.push(chunk);
-      })
-      .on('end', function () {
-        resolve(Buffer.concat(buffers).toString(stringEncoding));
-      })
-      .end(data, self.binaryEncoding);
-    }
-    catch (error) {
+    var decipher = crypto.createDecipher(self.encryptAlgorithm, key);
+    var buffers = [];
+
+    decipher.on('data', function (chunk) {
+      buffers.push(chunk);
+    })
+    .on('end', function () {
+      resolve(Buffer.concat(buffers).toString(stringEncoding));
+    }).on('error', function () {
       reject(new Error('Could not decrypt data; \'data\' may not be encrypted ' +
-        ' or may not have been encrypted with \'key\''));
-    }
+      ' or may not have been encrypted with \'key\''));
+    })
+    .end(data, self.binaryEncoding);
   });
 };
 
