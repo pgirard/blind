@@ -2,8 +2,7 @@
 
 var crypto = require('crypto');
 var Promise = require('bluebird');
-
-var is = require('./is');
+var is = require('is');
 
 // constants
 
