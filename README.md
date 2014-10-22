@@ -1,5 +1,7 @@
 # blind
 
+[![NPM][npm-badge]][npm-badge-url]
+
 simple string encryption and hashing
 
 <img src="blind.jpg" />
@@ -112,3 +114,6 @@ Blind.create({ hashLength: 30 })
     assert.equal(value, 'lxl9UhUNyNYTPG6IJkILWu3ibNZQxTl5m+qE906U');
   });
 ```
+
+[npm-badge]: https://nodei.co/npm/blind.svg?downloads=true&stars=true
+[npm-badge-url]: https://nodei.co/npm/blind/
