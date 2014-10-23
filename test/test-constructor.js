@@ -2,8 +2,10 @@
 
 var Blind = require('../index');
 
+var key = 'kiSyAWnj9VDVIfI3u7zj';
+
 module.exports = function (n) {
-  n.plan(8);
+  n.plan(9);
 
   n.equal(new Blind().binaryEncoding, 'base64', 'should instantiate with new');
   n.equal(Blind().binaryEncoding, 'base64', 'should instantiate without new');
@@ -17,6 +19,13 @@ module.exports = function (n) {
   n.test('option encryptAlgorithm', function (t) {
     t.equal(new Blind({ encryptAlgorithm: 'aes-256-cbc' }).encryptAlgorithm, 'aes-256-cbc', 'should accept a valid value');
     t.throws(function () { new Blind({ encryptAlgorithm: 'xyz' }); }, 'should reject an invalid value');
+    t.end();
+  });
+
+  n.test('option encryptKey', function (t) {
+    t.equal(new Blind({ encryptKey: key }).encryptKey, key, 'should accept a valid value');
+    t.throws(function () { new Blind({ encryptKey: 10 }); }, 'should reject a non-string');
+    t.throws(function () { new Blind({ encryptKey: 'abcde' }); }, 'should reject a non-binary-encoded value');
     t.end();
   });
 

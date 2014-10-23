@@ -22,8 +22,9 @@ var blind = require('blind')(options);
 
 ## options / properties and defaults
  * __binaryEncoding__ - 'base64' or 'hex', encoding of random values, keys, salt, encrypted values and hashes
- * __encryptionAlgorithm__ - 'aes-256-cfb', algorithm used in encrypt() and decrypt(); see
+ * __encryptAlgorithm__ - 'aes-256-cfb', algorithm used in encrypt() and decrypt(); see
     [crypto.getCiphers()](http://nodejs.org/api/crypto.html#crypto_crypto_getciphers) for a list of valid values
+ * __encryptKey__ - undefined, default key to use in encrypt() and decrypt(); must be a binary encoded string
  * __hashAlgorithm__ - 'sha256', algorithm used in hash(); see
     [crypto.getHashes()](http://nodejs.org/api/crypto.html#crypto_crypto_gethashes) for a list of valid values
  * __hashRounds__ - 10000, number of hashing iterations to make it computationally expensive
@@ -51,7 +52,7 @@ var random = new Blind({ binaryEncoding: 'hex' }).random(16)
 
 ### encrypt(data, key)
 
-Encrypts plain text data using the binary-encoded key.
+Encrypts plain text data using the binary-encoded key (optional if _encryptKey_ is set).
 Returns the encrypted value as a binary-encoded string.
 Wraps [crypto.Cipher](http://nodejs.org/api/crypto.html#crypto_class_cipher).  
 
@@ -66,7 +67,7 @@ assert.equal(e, '1Uv7F3uWgc8g9uW3HlGFdWigBGQq4Hku');
 
 ### decrypt(encrypted, key)
 
-Decrypts the string of encrypted data using the binary-encoded key.
+Decrypts the string of encrypted data using the binary-encoded key (optional if _encryptKey_ is set).
 Returns the plain text value.
 Wraps [crypto.Decipher](http://nodejs.org/api/crypto.html#crypto_class_decipher).
 

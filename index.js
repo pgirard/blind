@@ -29,6 +29,7 @@ var skipChecksDefault = false;
 
 var binaryEncodingMessage = 'Property \'binaryEncoding\' must be one of the following: ' + validBinaryEncodings.join(', ');
 var encryptAlgorithmMessage = 'Property \'encryptAlgorithm\' invalid; see require(\'crypto\').getCiphers() for a list of valid values';
+var encryptKeyMessage = 'Property \'encryptKey\' must be a string with one or more characters';
 var hashAlgorithmMessage = 'Property \'hashAlgorithm\' invalid; see require(\'crypto\').getHashes() for a list of valid values';
 var hashRoundsMessage = 'Property \'hashRounds\' must be a number';
 var hashRoundsRangeMessage = 'Property \'hashRounds\' must be an integer greater than 0';
@@ -60,6 +61,20 @@ function Blind(options) {
 
   if (validEncryptAlgorithms.indexOf(this.encryptAlgorithm) < 0) {
     throw new RangeError(encryptAlgorithmMessage);
+  }
+
+  // set and check encryptKey
+
+  if (options.encryptKey) {
+    if (!is.string(options.encryptKey) || !options.encryptKey.length) {
+      throw new TypeError(encryptKeyMessage);
+    }
+
+    if (!is[this.binaryEncoding](options.encryptKey)) {
+      throw new TypeError('Property \'encryptKey\' must be a ' + this.binaryEncoding + ' encoded binary value');
+    }
+
+    this.encryptKey = options.encryptKey;
   }
 
   // set and check hashAlgorithm
@@ -157,6 +172,16 @@ Blind.prototype.encrypt = function(data, key) {
       throw new RangeError(encryptAlgorithmMessage);
     }
 
+    if (this.encryptKey) {
+      if (!is.string(this.encryptKey) || !this.encryptKey.length) {
+        throw new TypeError(encryptKeyMessage);
+      }
+
+      if (!is[this.binaryEncoding](this.encryptKey)) {
+        throw new TypeError('Property \'encryptKey\' must be a ' + this.binaryEncoding + ' encoded binary value');
+      }
+    }
+
     if (!is.number(this.maxDataLength)) {
       throw new TypeError(maxDataLengthMessage);
     }
@@ -169,17 +194,20 @@ Blind.prototype.encrypt = function(data, key) {
       throw new TypeError('Argument \'data\' must be a string between 1 and ' + this.maxDataLength + ' characters long');
     }
 
-    if (!is.string(key) || !key.length) {
-      throw new TypeError('Argument \'key\' must be a string with one or more characters');
-    }
+    if (key !== undefined || !this.encryptKey) {
+      if (!is.string(key) || !key.length) {
+        throw new TypeError('Argument \'key\' must be a string with one or more characters');
+      }
 
-    if (!is[this.binaryEncoding](key)) {
-      throw new TypeError('Argument \'key\' must be a ' + this.binaryEncoding + ' encoded binary value');
+      if (!is[this.binaryEncoding](key)) {
+        throw new TypeError('Argument \'key\' must be a ' + this.binaryEncoding + ' encoded binary value');
+      }
     }
   }
 
   // encrypt the data
 
+  key = new Buffer(key || this.encryptKey, this.binaryEncoding);
   var cipher = crypto.createCipher(this.encryptAlgorithm, key);
   return cipher.update(data, stringEncoding, this.binaryEncoding) + cipher.final(this.binaryEncoding);
 };
@@ -195,6 +223,16 @@ Blind.prototype.decrypt = function(data, key) {
 
     if (validEncryptAlgorithms.indexOf(this.encryptAlgorithm) < 0) {
       throw new RangeError(encryptAlgorithmMessage);
+    }
+
+    if (this.encryptKey) {
+      if (!is.string(this.encryptKey) || !this.encryptKey.length) {
+        throw new TypeError(encryptKeyMessage);
+      }
+
+      if (!is[this.binaryEncoding](this.encryptKey)) {
+        throw new TypeError('Property \'encryptKey\' must be a ' + this.binaryEncoding + ' encoded binary value');
+      }
     }
 
     if (!is.number(this.maxDataLength)) {
@@ -218,17 +256,20 @@ Blind.prototype.decrypt = function(data, key) {
       throw new TypeError('Argument \'data\' must be a ' + this.binaryEncoding + ' encoded binary value');
     }
 
-    if (!is.string(key) || !key.length) {
-      throw new TypeError('Argument \'key\' must be a string with one or more characters');
-    }
+    if (key !== undefined || !this.encryptKey) {
+      if (!is.string(key) || !key.length) {
+        throw new TypeError('Argument \'key\' must be a string with one or more characters');
+      }
 
-    if (!is[this.binaryEncoding](key)) {
-      throw new TypeError('Argument \'key\' must be a ' + this.binaryEncoding + ' encoded binary value');
+      if (!is[this.binaryEncoding](key)) {
+        throw new TypeError('Argument \'key\' must be a ' + this.binaryEncoding + ' encoded binary value');
+      }
     }
   }
 
   // decrypt the data
 
+  key = new Buffer(key || this.encryptKey, this.binaryEncoding);
   var decipher = crypto.createDecipher(this.encryptAlgorithm, key);
   return decipher.update(data, this.binaryEncoding, stringEncoding) + decipher.final(stringEncoding);
 };
@@ -266,7 +307,7 @@ Blind.prototype.hash = function(data, salt) {
       throw new TypeError('Argument \'data\' must be a string between 1 and ' + this.maxDataLength + ' characters long');
     }
 
-    if (salt) {
+    if (salt !== undefined) {
       if (!is.string(salt) || !salt.length) {
         throw new TypeError('Argument \'salt\' must be a string with one or more characters');
       }
@@ -279,9 +320,10 @@ Blind.prototype.hash = function(data, salt) {
 
   // hash the data
 
-  salt = salt || '';
+  salt = new Buffer(salt || '', this.binaryEncoding);
+  data = new Buffer(data);
 
-  var buffer = Buffer.concat([ new Buffer(salt, this.binaryEncoding), new Buffer(data) ]);
+  var buffer = Buffer.concat([ salt, data ]);
   var hash;
 
   for (var i = 0; i < this.hashRounds; i++) {
