@@ -1,7 +1,6 @@
 'use strict';
 
 module.exports = function (t) {
-  t.test('static', require('./test-static'));
   t.test('constructor', require('./test-constructor'));
   t.test('random()', require('./test-random'));
   t.test('encrypt()', require('./test-encrypt'));

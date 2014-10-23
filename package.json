@@ -1,6 +1,6 @@
 {
   "name": "blind",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "simple string encryption and hashing",
   "main": "index.js",
   "scripts": {
@@ -25,7 +25,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "bluebird": "~2.3.6",
     "is": "~2.1.0"
   },
   "devDependencies": {

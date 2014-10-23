@@ -1,7 +1,6 @@
 'use strict';
 
 var crypto = require('crypto');
-var Promise = require('bluebird');
 var is = require('is');
 
 // constants
@@ -13,13 +12,14 @@ var stringEncoding = 'utf8';
 // valid values
 
 var validEncryptAlgorithms = crypto.getCiphers();
+var validHashAlgorithms = crypto.getHashes();
 var validBinaryEncodings = [ 'base64', 'hex' ];
 
 // defaults for property values
 
 var binaryEncodingDefault = 'base64';
 var encryptAlgorithmDefault = 'aes-256-cfb';
-var hashLengthDefault = 60;
+var hashAlgorithmDefault = 'sha256';
 var hashRoundsDefault = 10000;
 var maxDataLengthDefault = 4096;
 var maxRandomLengthDefault = 120;
@@ -29,8 +29,7 @@ var skipChecksDefault = false;
 
 var binaryEncodingMessage = 'Property \'binaryEncoding\' must be one of the following: ' + validBinaryEncodings.join(', ');
 var encryptAlgorithmMessage = 'Property \'encryptAlgorithm\' invalid; see require(\'crypto\').getCiphers() for a list of valid values';
-var hashLengthMessage = 'Property \'hashLength\' must be a number';
-var hashLengthRangeMessage = 'Property \'hashLength\' must be an integer greater than 0';
+var hashAlgorithmMessage = 'Property \'hashAlgorithm\' invalid; see require(\'crypto\').getHashes() for a list of valid values';
 var hashRoundsMessage = 'Property \'hashRounds\' must be a number';
 var hashRoundsRangeMessage = 'Property \'hashRounds\' must be an integer greater than 0';
 var maxDataLengthMessage = 'Property \'maxDataLength\' must be a number';
@@ -42,6 +41,10 @@ var maxRandomLengthRangeMessage = 'Property \'maxRandomLength\' must be an integ
 
 function Blind(options) {
   options = options || {};
+
+  if (!(this instanceof Blind)) {
+    return new Blind(options);
+  }
 
   // set and check binaryEncoding
 
@@ -59,16 +62,12 @@ function Blind(options) {
     throw new RangeError(encryptAlgorithmMessage);
   }
 
-  // set and check hashLength
+  // set and check hashAlgorithm
 
-  this.hashLength = options.hashLength || hashLengthDefault;
+  this.hashAlgorithm = options.hashAlgorithm || hashAlgorithmDefault;
 
-  if (!is.number(this.hashLength)) {
-    throw new TypeError(hashLengthMessage);
-  }
-
-  if (!is.int(this.hashLength) || this.hashLength < 1) {
-    throw new RangeError(hashLengthRangeMessage);
+  if (validHashAlgorithms.indexOf(this.hashAlgorithm) < 0) {
+    throw new RangeError(hashAlgorithmMessage);
   }
 
   // set and check hashRounds
@@ -115,269 +114,183 @@ function Blind(options) {
 // methods
 
 Blind.prototype.random = function (length) {
-  var self = this;
 
-  return new Promise(function (resolve, reject) {
+  // check properties and arguments
 
-    // check properties and arguments
-
-    if (!self.skipChecks) {
-      if (validBinaryEncodings.indexOf(self.binaryEncoding) < 0) {
-        reject(new RangeError(binaryEncodingMessage));
-        return;
-      }
-
-      if (!is.number(self.maxRandomLength)) {
-        reject(new TypeError(maxRandomLengthMessage));
-        return;
-      }
-
-      if (!is.int(self.maxRandomLength) || self.maxRandomLength < minRandomLength + 1) {
-        reject(new RangeError(maxRandomLengthRangeMessage));
-        return;
-      }
-
-      if (!is.number(length)) {
-        reject(new TypeError('Argument \'length\' must be a number'));
-        return;
-      }
-
-      if (!is.int(length) || !is.within(length, minRandomLength, self.maxRandomLength)) {
-        reject(new RangeError('Argument \'length\' must be an integer between ' + minRandomLength + ' and ' + self.maxRandomLength));
-        return;
-      }
+  if (!this.skipChecks) {
+    if (validBinaryEncodings.indexOf(this.binaryEncoding) < 0) {
+      throw new RangeError(binaryEncodingMessage);
     }
 
-    // generate the random value
+    if (!is.number(this.maxRandomLength)) {
+      throw new TypeError(maxRandomLengthMessage);
+    }
 
-    crypto.randomBytes(length, function (error, buffer) {
-      if (!error) {
-        resolve(buffer.toString(self.binaryEncoding));
-      }
-      else {
-        reject(error);
-      }
-    });
-  });
+    if (!is.int(this.maxRandomLength) || this.maxRandomLength < minRandomLength + 1) {
+      throw new RangeError(maxRandomLengthRangeMessage);
+    }
+
+    if (!is.number(length)) {
+      throw new TypeError('Argument \'length\' must be a number');
+    }
+
+    if (!is.int(length) || !is.within(length, minRandomLength, this.maxRandomLength)) {
+      throw new RangeError('Argument \'length\' must be an integer between ' + minRandomLength + ' and ' + this.maxRandomLength);
+    }
+  }
+
+  // generate the random value
+
+  return crypto.randomBytes(length).toString(this.binaryEncoding);
 };
 
 Blind.prototype.encrypt = function(data, key) {
-  var self = this;
 
-  return new Promise(function (resolve, reject) {
+  // check properties and arguments
 
-    // check properties and arguments
-
-    if (!self.skipChecks) {
-      if (validBinaryEncodings.indexOf(self.binaryEncoding) < 0) {
-        reject(new RangeError(binaryEncodingMessage));
-        return;
-      }
-
-      if (validEncryptAlgorithms.indexOf(self.encryptAlgorithm) < 0) {
-        reject(new RangeError(encryptAlgorithmMessage));
-        return;
-      }
-
-      if (!is.number(self.maxDataLength)) {
-        reject(new TypeError(maxDataLengthMessage));
-        return;
-      }
-
-      if (!is.int(self.maxDataLength) || self.maxDataLength < 1) {
-        reject(new RangeError(maxDataLengthRangeMessage));
-        return;
-      }
-
-      if (!is.string(data) || !is.within(data.length, 1, self.maxDataLength)) {
-        reject(new TypeError('Argument \'data\' must be a string between 1 and ' + self.maxDataLength + ' characters long'));
-        return;
-      }
-
-      if (!is.string(key) || !key.length) {
-        reject(new TypeError('Argument \'key\' must be a string with one or more characters'));
-        return;
-      }
-
-      if (!is[self.binaryEncoding](key)) {
-        reject(new TypeError('Argument \'key\' must be a ' + self.binaryEncoding + ' encoded binary value'));
-        return;
-      }
+  if (!this.skipChecks) {
+    if (validBinaryEncodings.indexOf(this.binaryEncoding) < 0) {
+      throw new RangeError(binaryEncodingMessage);
     }
 
-    // encrypt the data
-
-    try {
-      var cipher = crypto.createCipher(self.encryptAlgorithm, key);
-      var buffers = [];
-
-      cipher.on('data', function (chunk) {
-        buffers.push(chunk);
-      })
-      .on('end', function () {
-        resolve(Buffer.concat(buffers).toString(self.binaryEncoding));
-      })
-      .end(data, stringEncoding);
+    if (validEncryptAlgorithms.indexOf(this.encryptAlgorithm) < 0) {
+      throw new RangeError(encryptAlgorithmMessage);
     }
-    catch (error) {
-      reject(error);
+
+    if (!is.number(this.maxDataLength)) {
+      throw new TypeError(maxDataLengthMessage);
     }
-  });
+
+    if (!is.int(this.maxDataLength) || this.maxDataLength < 1) {
+      throw new RangeError(maxDataLengthRangeMessage);
+    }
+
+    if (!is.string(data) || !is.within(data.length, 1, this.maxDataLength)) {
+      throw new TypeError('Argument \'data\' must be a string between 1 and ' + this.maxDataLength + ' characters long');
+    }
+
+    if (!is.string(key) || !key.length) {
+      throw new TypeError('Argument \'key\' must be a string with one or more characters');
+    }
+
+    if (!is[this.binaryEncoding](key)) {
+      throw new TypeError('Argument \'key\' must be a ' + this.binaryEncoding + ' encoded binary value');
+    }
+  }
+
+  // encrypt the data
+
+  var cipher = crypto.createCipher(this.encryptAlgorithm, key);
+  return cipher.update(data, stringEncoding, this.binaryEncoding) + cipher.final(this.binaryEncoding);
 };
 
 Blind.prototype.decrypt = function(data, key) {
-  var self = this;
 
-  return new Promise(function (resolve, reject) {
+  // check properties and arguments
 
-    // check properties and arguments
-
-    if (!self.skipChecks) {
-      if (validBinaryEncodings.indexOf(self.binaryEncoding) < 0) {
-        reject(new RangeError(binaryEncodingMessage));
-        return;
-      }
-
-      if (validEncryptAlgorithms.indexOf(self.encryptAlgorithm) < 0) {
-        reject(new RangeError(encryptAlgorithmMessage));
-        return;
-      }
-
-      if (!is.number(self.maxDataLength)) {
-        reject(new TypeError(maxDataLengthMessage));
-        return;
-      }
-
-      if (!is.int(self.maxDataLength) || self.maxDataLength < 1) {
-        reject(new RangeError(maxDataLengthRangeMessage));
-        return;
-      }
-
-      var minLength = self.binaryEncoding === 'base64' ? 4 : 2;
-      var encodingMultiplier = self.binaryEncoding === 'base64' ? 4 / 3 : 2;
-      var maxBlockLength = Math.ceil(self.maxDataLength / maxEncryptBlockSize);
-      var maxLength = Math.ceil(maxBlockLength * maxEncryptBlockSize * encodingMultiplier);
-
-      if (!is.string(data) || !is.within(data.length, minLength, maxLength)) {
-        reject(new TypeError('Argument \'data\' must be a string between ' + minLength + ' and ' + maxLength + ' characters long'));
-        return;
-      }
-
-      if (!is[self.binaryEncoding](data)) {
-        reject(new TypeError('Argument \'data\' must be a ' + self.binaryEncoding + ' encoded binary value'));
-        return;
-      }
-
-      if (!is.string(key) || !key.length) {
-        reject(new TypeError('Argument \'key\' must be a string with one or more characters'));
-        return;
-      }
-
-      if (!is[self.binaryEncoding](key)) {
-        reject(new TypeError('Argument \'key\' must be a ' + self.binaryEncoding + ' encoded binary value'));
-        return;
-      }
+  if (!this.skipChecks) {
+    if (validBinaryEncodings.indexOf(this.binaryEncoding) < 0) {
+      throw new RangeError(binaryEncodingMessage);
     }
 
-    // decrypt the data
-
-    try {
-      var decipher = crypto.createDecipher(self.encryptAlgorithm, key);
-      var buffers = [];
-
-      decipher.on('data', function (chunk) {
-        buffers.push(chunk);
-      })
-      .on('end', function () {
-        resolve(Buffer.concat(buffers).toString(stringEncoding));
-      })
-      .end(data, self.binaryEncoding);
+    if (validEncryptAlgorithms.indexOf(this.encryptAlgorithm) < 0) {
+      throw new RangeError(encryptAlgorithmMessage);
     }
-    catch (error) {
-      reject(new Error('Could not decrypt data; \'data\' may not be encrypted ' +
-        ' or may not have been encrypted with \'key\''));
+
+    if (!is.number(this.maxDataLength)) {
+      throw new TypeError(maxDataLengthMessage);
     }
-  });
+
+    if (!is.int(this.maxDataLength) || this.maxDataLength < 1) {
+      throw new RangeError(maxDataLengthRangeMessage);
+    }
+
+    var minLength = this.binaryEncoding === 'base64' ? 4 : 2;
+    var encodingMultiplier = this.binaryEncoding === 'base64' ? 4 / 3 : 2;
+    var maxBlockLength = Math.ceil(this.maxDataLength / maxEncryptBlockSize);
+    var maxLength = Math.ceil(maxBlockLength * maxEncryptBlockSize * encodingMultiplier);
+
+    if (!is.string(data) || !is.within(data.length, minLength, maxLength)) {
+      throw new TypeError('Argument \'data\' must be a string between ' + minLength + ' and ' + maxLength + ' characters long');
+    }
+
+    if (!is[this.binaryEncoding](data)) {
+      throw new TypeError('Argument \'data\' must be a ' + this.binaryEncoding + ' encoded binary value');
+    }
+
+    if (!is.string(key) || !key.length) {
+      throw new TypeError('Argument \'key\' must be a string with one or more characters');
+    }
+
+    if (!is[this.binaryEncoding](key)) {
+      throw new TypeError('Argument \'key\' must be a ' + this.binaryEncoding + ' encoded binary value');
+    }
+  }
+
+  // decrypt the data
+
+  var decipher = crypto.createDecipher(this.encryptAlgorithm, key);
+  return decipher.update(data, this.binaryEncoding, stringEncoding) + decipher.final(stringEncoding);
 };
 
 Blind.prototype.hash = function(data, salt) {
-  var self = this;
 
-  return new Promise(function (resolve, reject) {
+  // check properties and arguments
 
-    // check properties and arguments
-
-    if (!self.skipChecks) {
-      if (validBinaryEncodings.indexOf(self.binaryEncoding) < 0) {
-        reject(new RangeError(binaryEncodingMessage));
-        return;
-      }
-
-      if (!is.number(self.hashLength)) {
-        reject(new TypeError(hashLengthMessage));
-        return;
-      }
-
-      if (!is.int(self.hashLength) || self.hashLength < 1) {
-        reject(new RangeError(hashLengthRangeMessage));
-        return;
-      }
-
-      if (!is.number(self.hashRounds)) {
-        reject(new TypeError(hashRoundsMessage));
-        return;
-      }
-
-      if (!is.int(self.hashRounds) || self.hashRounds < 1) {
-        reject(new RangeError(hashRoundsRangeMessage));
-        return;
-      }
-
-      if (!is.number(self.maxDataLength)) {
-        reject(new TypeError(maxDataLengthMessage));
-        return;
-      }
-
-      if (!is.int(self.maxDataLength) || self.maxDataLength < 1) {
-        reject(new RangeError(maxDataLengthRangeMessage));
-        return;
-      }
-
-      if (!is.string(data) || !is.within(data.length, 1, self.maxDataLength)) {
-        reject(new TypeError('Argument \'data\' must be a string between 1 and ' + self.maxDataLength + ' characters long'));
-        return;
-      }
-
-      if (salt) {
-        if (!is.string(salt) || !salt.length) {
-          reject(new TypeError('Argument \'salt\' must be a string with one or more characters'));
-          return;
-        }
-
-        if (!is[self.binaryEncoding](salt)) {
-          reject(new TypeError('Argument \'salt\' must a ' + self.binaryEncoding + ' encoded binary value'));
-          return;
-        }
-      }
+  if (!this.skipChecks) {
+    if (validBinaryEncodings.indexOf(this.binaryEncoding) < 0) {
+      throw new RangeError(binaryEncodingMessage);
     }
 
-    // hash the data
+    if (validHashAlgorithms.indexOf(this.hashAlgorithm) < 0) {
+      throw new RangeError(hashAlgorithmMessage);
+    }
 
-    crypto.pbkdf2(data, salt, self.hashRounds, self.hashLength, function (error, hash) {
-      if (!error) {
-        resolve(hash.toString(self.binaryEncoding));
+    if (!is.number(this.hashRounds)) {
+      throw new TypeError(hashRoundsMessage);
+    }
+
+    if (!is.int(this.hashRounds) || this.hashRounds < 1) {
+      throw new RangeError(hashRoundsRangeMessage);
+    }
+
+    if (!is.number(this.maxDataLength)) {
+      throw new TypeError(maxDataLengthMessage);
+    }
+
+    if (!is.int(this.maxDataLength) || this.maxDataLength < 1) {
+      throw new RangeError(maxDataLengthRangeMessage);
+    }
+
+    if (!is.string(data) || !is.within(data.length, 1, this.maxDataLength)) {
+      throw new TypeError('Argument \'data\' must be a string between 1 and ' + this.maxDataLength + ' characters long');
+    }
+
+    if (salt) {
+      if (!is.string(salt) || !salt.length) {
+        throw new TypeError('Argument \'salt\' must be a string with one or more characters');
       }
-      else {
-        reject(error);
+
+      if (!is[this.binaryEncoding](salt)) {
+        throw new TypeError('Argument \'salt\' must a ' + this.binaryEncoding + ' encoded binary value');
       }
-    });
-  });
-};
+    }
+  }
 
-// static methods
+  // hash the data
 
-Blind.create = function (options) {
-  return new Blind(options);
+  salt = salt || '';
+
+  var buffer = Buffer.concat([ new Buffer(salt, this.binaryEncoding), new Buffer(data) ]);
+  var hash;
+
+  for (var i = 0; i < this.hashRounds; i++) {
+    hash = crypto.createHash(this.hashAlgorithm);
+    hash.update(buffer);
+    buffer = hash.digest();
+  }
+
+  return buffer.toString(this.binaryEncoding);
 };
 
 module.exports = Blind;
