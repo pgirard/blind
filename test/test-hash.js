@@ -7,9 +7,13 @@ var salt = 'kiSyAWnj9VDVIfI3u7zj';
 var hashed = 'HuPoD7hAPQ2CF9jsfzf3UESqM4vlB5DjEZ2CGCpkLbw=';
 
 module.exports = function (n) {
-  n.plan(7);
+  n.plan(8);
 
   n.equal(new Blind().hash(plainText, salt), hashed, 'should hash a value');
+
+  new Blind().hash(plainText, salt, function (err, value) {
+    n.equal(value, hashed, 'should hash a value asynchronously');
+  });
 
   n.test('property binaryEncoding', function (t) {
     t.plan(1);

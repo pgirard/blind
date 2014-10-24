@@ -1,6 +1,7 @@
 'use strict';
 
 var crypto = require('crypto');
+var async = require('async');
 var is = require('is');
 
 // constants
@@ -23,6 +24,7 @@ var hashAlgorithmDefault = 'sha256';
 var hashRoundsDefault = 10000;
 var maxDataLengthDefault = 4096;
 var maxRandomLengthDefault = 120;
+var randomLengthDefault = 24;
 var skipChecksDefault = false;
 
 // property error messages
@@ -37,6 +39,7 @@ var maxDataLengthMessage = 'Property \'maxDataLength\' must be a number';
 var maxDataLengthRangeMessage = 'Property \'maxDataLength\' must be an integer greater than 0';
 var maxRandomLengthMessage = 'Property \'maxRandomLength\' must be a number';
 var maxRandomLengthRangeMessage = 'Property \'maxRandomLength\' must be an integer greater than ' + minRandomLength;
+var randomLengthMessage = 'Property \'randomLength\' must be a number';
 
 // constructor
 
@@ -121,6 +124,18 @@ function Blind(options) {
     throw new RangeError(maxRandomLengthRangeMessage);
   }
 
+  // set and check randomLength
+
+  this.randomLength = options.randomLength || randomLengthDefault;
+
+  if (!is.number(this.randomLength)) {
+    throw new TypeError(randomLengthMessage);
+  }
+
+  if (!is.int(this.randomLength) || !is.within(this.randomLength, minRandomLength, this.maxRandomLength)) {
+    throw new RangeError('Property \'randomLength\' must be an integer between ' + minRandomLength + ' and ' + this.maxRandomLength);
+  }
+
   // set skipChecks
 
   this.skipChecks = options.skipChecks || skipChecksDefault;
@@ -145,18 +160,29 @@ Blind.prototype.random = function (length) {
       throw new RangeError(maxRandomLengthRangeMessage);
     }
 
-    if (!is.number(length)) {
-      throw new TypeError('Argument \'length\' must be a number');
-    }
+    if (length === undefined) {
+      if (!is.number(this.randomLength)) {
+        throw new TypeError(randomLengthMessage);
+      }
 
-    if (!is.int(length) || !is.within(length, minRandomLength, this.maxRandomLength)) {
-      throw new RangeError('Argument \'length\' must be an integer between ' + minRandomLength + ' and ' + this.maxRandomLength);
+      if (!is.int(this.randomLength) || !is.within(this.randomLength, minRandomLength, this.maxRandomLength)) {
+        throw new RangeError('Property \'randomLength\' must be an integer between ' + minRandomLength + ' and ' + this.maxRandomLength);
+      }
+    }
+    else {
+      if (!is.number(length)) {
+        throw new TypeError('Argument \'length\' must be a number');
+      }
+
+      if (!is.int(length) || !is.within(length, minRandomLength, this.maxRandomLength)) {
+        throw new RangeError('Argument \'length\' must be an integer between ' + minRandomLength + ' and ' + this.maxRandomLength);
+      }
     }
   }
 
   // generate the random value
 
-  return crypto.randomBytes(length).toString(this.binaryEncoding);
+  return crypto.randomBytes(length || this.randomLength).toString(this.binaryEncoding);
 };
 
 Blind.prototype.encrypt = function(data, key) {
@@ -274,7 +300,7 @@ Blind.prototype.decrypt = function(data, key) {
   return decipher.update(data, this.binaryEncoding, stringEncoding) + decipher.final(stringEncoding);
 };
 
-Blind.prototype.hash = function(data, salt) {
+Blind.prototype.hash = function(data, salt, callback) {
 
   // check properties and arguments
 
@@ -307,14 +333,18 @@ Blind.prototype.hash = function(data, salt) {
       throw new TypeError('Argument \'data\' must be a string between 1 and ' + this.maxDataLength + ' characters long');
     }
 
-    if (salt !== undefined) {
+    if (salt !== undefined && salt !== null) {
       if (!is.string(salt) || !salt.length) {
         throw new TypeError('Argument \'salt\' must be a string with one or more characters');
       }
 
       if (!is[this.binaryEncoding](salt)) {
-        throw new TypeError('Argument \'salt\' must a ' + this.binaryEncoding + ' encoded binary value');
+        throw new TypeError('Argument \'salt\' must be a ' + this.binaryEncoding + ' encoded binary value');
       }
+    }
+
+    if (callback && !is.fn(callback)) {
+      throw new TypeError('Argument \'callback\' must be a function');
     }
   }
 
@@ -324,15 +354,36 @@ Blind.prototype.hash = function(data, salt) {
   data = new Buffer(data);
 
   var buffer = Buffer.concat([ salt, data ]);
-  var hash;
+  var i = 0;
 
-  for (var i = 0; i < this.hashRounds; i++) {
-    hash = crypto.createHash(this.hashAlgorithm);
-    hash.update(buffer);
-    buffer = hash.digest();
+  if (!callback) {
+    for (i = 0; i < this.hashRounds; i++) {
+      buffer = hash(buffer, this.hashAlgorithm);
+    }
+
+    return buffer.toString(this.binaryEncoding);
   }
+  else {
+    var self = this;
 
-  return buffer.toString(this.binaryEncoding);
+    async.whilst(function () { return i < self.hashRounds; },
+      function (next) {
+        buffer = hash(buffer, self.hashAlgorithm);
+        i += 1;
+        setImmediate(next);
+      },
+      function (err) {
+        var result = !err ? buffer.toString(self.binaryEncoding) : undefined;
+        callback(err, result);
+      }
+    );
+  }
 };
+
+function hash(buffer, algorithm) {
+  var hasher = crypto.createHash(algorithm);
+  hasher.update(buffer);
+  return hasher.digest();
+}
 
 module.exports = Blind;

@@ -1,6 +1,6 @@
 # blind
 
-simple string encryption and hashing
+simple string encryption and hashing for Node
 
 <img src="blind.jpg" />
 
@@ -27,42 +27,49 @@ var blind = require('blind')(options);
  * __encryptKey__ - undefined, default key to use in encrypt() and decrypt(); must be a binary encoded string
  * __hashAlgorithm__ - 'sha256', algorithm used in hash(); see
     [crypto.getHashes()](http://nodejs.org/api/crypto.html#crypto_crypto_gethashes) for a list of valid values
- * __hashRounds__ - 10000, number of hashing iterations to make it computationally expensive
- * __maxDataLength__ - 4096, maximum length in characters of data to be encrypted or hashed
- * __maxRandomLength__ - 120, maximum length in bytes of random values (before encoding)
- * __skipChecks__ - false, skip property and argument checks on function calls; improves performance,
-    returns cryptic error messages when it fails
+ * __hashRounds__ - 10000, number of iterations to use in hash() to make it computationally expensive
+ * __maxDataLength__ - 4096, maximum allowed length in characters of data to be encrypted or hashed
+ * __maxRandomLength__ - 120, maximum allowed length value for random()
+ * __randomLength__ - 24, default length to use in random()
+ * __skipChecks__ - false, whether to skip property and argument checks in the functions; setting to true improves
+    performance slightly but returns cryptic error messages when it fails (not recommended)
 
 ## functions
 
 ### random(length)
 
-Generates a random value of the specified length in bytes.
-Returns a Promise which returns the random value as a binary-encoded string.
+Generates a random value of the specified length in bytes (optional, defaults to _randomLength_).
+Returns the random value as a binary-encoded string.
 Use this to generate keys and salt for the functions below.
 Wraps [crypto.randomBytes](http://nodejs.org/api/crypto.html#crypto_crypto_randombytes_size_callback).
 
 ``` js
-var random = new Blind().random(16);
+random = new Blind().random();
+// example: '3EwDPmJtBzfxXcevaVaGBE9geAFhX0Y8'
+
+random = new Blind().random(16);
 // example: 'PZ3oXv2v6Pq5HAPFI9NFbQ=='
 
-var random = new Blind({ binaryEncoding: 'hex' }).random(16)
+random = new Blind({ binaryEncoding: 'hex' }).random(16)
 // example: '5dfc4556a70e95a9cfda08975187b165'
 ```
 
 ### encrypt(data, key)
 
-Encrypts plain text data using the binary-encoded key (optional if _encryptKey_ is set).
+Encrypts plain text data using a binary-encoded key (optional if _encryptKey_ is set).
 Returns the encrypted value as a binary-encoded string.
 Wraps [crypto.Cipher](http://nodejs.org/api/crypto.html#crypto_class_cipher).  
 
 ``` js
-var encrypted = new Blind().encrypt('Blueberry pancakes', 'PZ3oXv2v6Pq5HAPFI9NFbQ==');
-assert.equal(e, 'IXH46BLKBXwZcC2QyNHB+EmJ');
+encrypted = new Blind({ encryptKey: 'PZ3oXv2v6Pq5HAPFI9NFbQ==' }).encrypt('Blueberry pancakes');
+assert.equal(encrypted, 'yg7scmfKvnvwAcSnDy1Z+Gzm');
 
-var encrypted = new Blind({ encryptAlgorithm: 'blowfish' })
+encrypted = new Blind().encrypt('Blueberry pancakes', 'PZ3oXv2v6Pq5HAPFI9NFbQ==');
+assert.equal(encrypted, 'yg7scmfKvnvwAcSnDy1Z+Gzm');
+
+encrypted = new Blind({ encryptAlgorithm: 'blowfish' })
   .encrypt('Blueberry pancakes', 'PZ3oXv2v6Pq5HAPFI9NFbQ==');
-assert.equal(e, '1Uv7F3uWgc8g9uW3HlGFdWigBGQq4Hku');
+assert.equal(encrypted, 'ARCwwlkXGORgv46zgh4sX8DzqpcWf8pi');
 ```
 
 ### decrypt(encrypted, key)
@@ -72,25 +79,35 @@ Returns the plain text value.
 Wraps [crypto.Decipher](http://nodejs.org/api/crypto.html#crypto_class_decipher).
 
 ``` js
-var decrypted = new Blind().decrypt('IXH46BLKBXwZcC2QyNHB+EmJ', 'PZ3oXv2v6Pq5HAPFI9NFbQ==');
+decrypted = new Blind({ encryptKey: 'PZ3oXv2v6Pq5HAPFI9NFbQ==' }).decrypt('yg7scmfKvnvwAcSnDy1Z+Gzm');
 assert.equal(decrypted, 'Blueberry pancakes');
 
-var decrypted = new Blind({ encryptAlgorithm: 'blowfish' })
-  .decrypt('1Uv7F3uWgc8g9uW3HlGFdWigBGQq4Hku', 'PZ3oXv2v6Pq5HAPFI9NFbQ==')
+decrypted = new Blind().decrypt('yg7scmfKvnvwAcSnDy1Z+Gzm', 'PZ3oXv2v6Pq5HAPFI9NFbQ==');
+assert.equal(decrypted, 'Blueberry pancakes');
+
+decrypted = new Blind({ encryptAlgorithm: 'blowfish' })
+  .decrypt('ARCwwlkXGORgv46zgh4sX8DzqpcWf8pi', 'PZ3oXv2v6Pq5HAPFI9NFbQ==')
 assert.equal(decrypted, 'Blueberry pancakes');
 ```
 
-### hash(data, salt)
+### hash(data, salt, callback)
 
 Hashes plain text data using an optional binary-encoded salt value.
 Returns the hashed value as a binary-encoded string.
+For asynchronous use (recommended), provide a callback function that takes two arguments, an error
+object and the hashed value.
 Wraps [crypto.Hash](http://nodejs.org/api/crypto.html#crypto_class_hash).
-This is synchronous and will occupy Node will it iterates through _blind.hashRounds_ calls to crypto.Hash.
 
 ``` js
-var hash = new Blind().hash('Banana nut muffin', 'PZ3oXv2v6Pq5HAPFI9NFbQ==');
+// synchronous
+hash = new Blind().hash('Banana nut muffin', 'PZ3oXv2v6Pq5HAPFI9NFbQ==');
 assert.equal(hash, '+evxR+9+Gr0gktw1AIS7Uzyw0w+iM6sIWdNEdF1WF44=');
 
-var hash = new Blind({ hashAlgorithm: 'sha512' }).hash('Banana nut muffin', 'PZ3oXv2v6Pq5HAPFI9NFbQ==');
+hash = new Blind({ hashAlgorithm: 'sha512' }).hash('Banana nut muffin', 'PZ3oXv2v6Pq5HAPFI9NFbQ==');
 assert.equal(hash, '1zLMsFAaziPTQMSSp6RI6vj7veMabm5EXJOo5Z4QPhnb3XH4lOsoCqwTk0PBfK6sYb8ANcer67B9K1HP8NtYhA==');
+
+// asynchronous
+new Blind().hash('Banana nut muffin', 'PZ3oXv2v6Pq5HAPFI9NFbQ==', function (err, hash) {
+  assert.equal(hash, '+evxR+9+Gr0gktw1AIS7Uzyw0w+iM6sIWdNEdF1WF44=');
+})
 ```
