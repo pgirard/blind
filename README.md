@@ -4,6 +4,8 @@ simple string encryption and hashing for Node
 
 <img src="blind.jpg" />
 
+[![NPM][npm-badge]][npm-badge-url]
+
 ## features
  * for hiding small text strings
  * helpful error messages
@@ -111,3 +113,5 @@ new Blind().hash('Banana nut muffin', 'PZ3oXv2v6Pq5HAPFI9NFbQ==', function (err,
   assert.equal(hash, '+evxR+9+Gr0gktw1AIS7Uzyw0w+iM6sIWdNEdF1WF44=');
 })
 ```
+[npm-badge]: https://nodei.co/npm/blind.svg?downloads=true&stars=true
+[npm-badge-url]: https://nodei.co/npm/blind/
